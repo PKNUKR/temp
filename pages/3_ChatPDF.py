@@ -1,7 +1,7 @@
-import streamlit as st
 from utils.pdf_loader import load_pdf_text
 from utils.vector_store import VectorStore
 from utils.openai_client import get_client
+import streamlit as st
 
 st.title("ChatPDF 페이지")
 
@@ -20,15 +20,20 @@ if st.button("Clear"):
 
 if uploaded:
     text = load_pdf_text(uploaded)
+
+    # 텍스트를 chunk로 분할
+    chunks = [text[i:i+800] for i in range(0, len(text), 800)]
+
     client = get_client(api_key)
 
-    embedding = client.embeddings.create(
-        model="text-embedding-3-large",
-        input=text
-    ).data[0].embedding
+    for chunk in chunks:
+        emb = client.embeddings.create(
+            model="text-embedding-3-small",
+            input=chunk
+        ).data[0].embedding
+        st.session_state.vector.add(chunk, emb)
 
-    st.session_state.vector.add(text, embedding)
-    st.info("PDF 내용이 저장되었습니다.")
+    st.info(f"총 {len(chunks)}개의 chunk 저장 완료!")
 
 query = st.text_input("질문 입력")
 
